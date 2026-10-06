@@ -1,0 +1,8 @@
+name: practice
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14
+  - pandas
+  - ipykernel
+prefix: /Users/marcus/miniforge3/envs/practice
