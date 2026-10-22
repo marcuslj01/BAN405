@@ -8,16 +8,6 @@ Work in a **notebook**, as last time. Solution proposals are in this folder as `
 
 ---
 
-## Version control (optional)
-
-If you want the practice: open a terminal in this week's folder, run `git init`, and make a first commit before you start. Then commit after each exercise, with a message saying what you did. When you are finished, `git log --oneline` shows you your own week.
-
-Add a `.gitignore` containing `__pycache__/` and `.ipynb_checkpoints/` so that git stops offering to track files you did not write.
-
-This is optional and nothing depends on it. A repository per week is not how you would organize a real project — it is a sandbox, so that a mess costs you one week and no more. If yours ends up in a state you cannot fix, delete the `.git` folder. Your files are untouched, and you start fresh next week.
-
----
-
 ## Before you start
 
 One thing the lecture did not cover, and exercise 4 needs it.
@@ -59,7 +49,7 @@ The filename itself is often data. `"AAPL.csv"` tells you which company the rows
 
 For each snippet below, write down what you think it will display **before** you run it. Then run it and check.
 
-Where your prediction was wrong, work out which rule from the lecture explains the real answer — that is the whole point of the exercise. Every one of these runs without an error, and most of them are wrong in a way nothing warns you about.
+Where your prediction was wrong, work out the rule that explains the real answer — that is the whole point of the exercise. Every one of these runs without an error, and most of them are wrong in a way nothing warns you about.
 
 **a)**
 
@@ -101,39 +91,53 @@ print(staff["hours"].sum())
 **d)**
 
 ```python
-left = pd.DataFrame({"k": ["x", "y"], "v": [1, 2]})
-right = pd.DataFrame({"k": ["x", "x", "y"], "w": [10, 20, 30]})
+survey = pd.DataFrame({
+    "group": ["x", "x", "y", "y", "y"],
+    "score": [4, None, 3, None, None],
+})
 
-merged = left.merge(right, on="k", how="left")
-
-print(len(left), "->", len(merged))
-print(merged)
+print(survey.groupby("group").size())
+print(survey.groupby("group")["score"].count())
+print(survey.groupby("group")["score"].mean())
 ```
 
 **e)**
 
 ```python
-panel = pd.DataFrame({
-    "country": ["A", "A", "B", "B"],
-    "year":    [2020, 2021, 2020, 2021],
-    "value":   [1.0, 2.0, 100.0, 101.0],
-})
+prices = pd.DataFrame({"item": ["tea", "coffee"], "value": [30, 45]})
+sold = pd.DataFrame({"item": ["tea", "coffee", "tea"], "value": [2, 1, 4]})
 
-panel["change"] = panel["value"].diff()
+both = sold.merge(prices, on="item", how="left")
 
-print(panel)
+print(both.columns.tolist())
+print(both)
 ```
 
 **f)**
 
 ```python
+panel = pd.DataFrame({
+    "country": ["A", "B", "A", "B", "A"],
+    "year":    [2021, 2020, 2020, 2021, 2022],
+    "value":   [2.0, 100.0, 1.0, 101.0, 4.0],
+})
+
+panel["change"] = panel.groupby("country")["value"].diff()
+
+print(panel)
+```
+
+**g)**
+
+```python
 dates = pd.DataFrame({
-    "date":  ["10/01/2021", "02/11/2020", "05/06/2021"],
+    "date":  ["10/01/2021", "02/11/2020", "05/06/2022"],
     "value": [1, 2, 3],
 })
 
+print(dates["date"].dtype)
 print(dates.sort_values("date"))
-print(pd.to_datetime(dates["date"]))
+print(dates["date"].max())
 ```
 
 ### Then: two broken snippets
@@ -141,80 +145,78 @@ print(pd.to_datetime(dates["date"]))
 Each of the two below does not do what its comment says. Say what is wrong, and write a corrected version.
 
 ```python
-# 1 - meant to report total emissions by region, for every region
+# 1 - meant to give each country's share of world emissions in 2023, in percent
 co2 = pd.read_csv("../data/co2_emissions.csv")
-info = pd.read_csv("../data/country_info.csv")
 
-merged = co2.merge(info, left_on="country", right_on="name", how="inner")
+year_2023 = co2[co2["year"] == 2023].copy()
+year_2023["share"] = 100 * year_2023["co2_total"] / year_2023["co2_total"].sum()
 
-print(merged.groupby("region")["co2_total"].sum())
+print(year_2023.sort_values("share", ascending=False)[["country", "share"]].head())
 ```
 
 ```python
-# 2 - meant to give each country's year-on-year change in emissions
+# 2 - meant to give each country's most recent renewable energy figure
 co2 = pd.read_csv("../data/co2_emissions.csv")
-co2 = co2.sort_values(["country", "year"])
 
-co2["change"] = co2["co2_total"].diff()
+latest = co2.dropna(subset=["renew_energy"]).drop_duplicates(subset="country")
 
-print(co2[co2["country"] == "Norway"][["year", "co2_total", "change"]].head())
+print(latest[latest["country"] == "Norway"][["country", "year", "renew_energy"]])
 ```
 
 ---
 
 ## 📚 Exercise 2: Summarizing the panel
 
-Load `../data/co2_emissions.csv` and add `co2_pc` the way the lecture's `load_emissions` does.
+Start from the lecture's `load_emissions` — copy it into your notebook — and load `../data/co2_emissions.csv` with it.
 
-1. Build a summary table with one row per year and three named columns: the number of entities with a `co2_total` figure, total emissions, and mean emissions per person. Round it and display the last five years.
-2. Do the same by `income_group`, which you will have to build first: use `np.select` on `gdp_pc`, with the bands from last week — below 1 000 is `"low"`, below 10 000 `"lower-middle"`, below 50 000 `"upper-middle"`, and above that `"high"`. Restrict to 2023, and make sure rows with no `gdp_pc` end up as missing rather than `"high"`.
+1. **What can you actually study?** With one `groupby`, count the non-missing values of every column in every year. Display a handful of years from across the period, and say in a markdown cell which indicators you could use for a study of 2023, and which you could not.
 
-   Then check: do the group totals add up to the column total? Explain any difference in a markdown cell.
-3. Add a column giving each entity's emissions per person **as a percentage of its own 24-year average**, and display Norway's last five years.
+   Then turn the question round: for each entity, count how many years of `gdp_pc` it has. How many entities have the complete 24-year series, and how many have none at all?
+2. Build an `income_group` column: use `np.select` on `gdp_pc`, with the bands from last time — below 1 000 is `"low"`, below 10 000 `"lower-middle"`, below 50 000 `"upper-middle"`, and above that `"high"`. Make sure rows with no `gdp_pc` end up as missing rather than `"high"`.
+
+   Restrict to 2023 and build a summary table with one row per income group and three named columns: the number of entities, total emissions, and mean emissions per person. Then check: do the group totals add up to the column total? Explain any difference in a markdown cell.
 
 ### Then: a baseline over part of the period
 
 Climate work rarely compares a year against the whole record — it compares it against a fixed **baseline period**. Compute, for each entity, its average `co2_pc` over **2000–2009**, and then an `anomaly` column giving every row's distance from its own entity's baseline.
 
-The baseline is an average over *some* of the rows and has to end up beside *all* of them, so `transform` will not do it on its own. Compute the baseline as its own small table, then bring it back with a merge — and validate that merge.
+The baseline is an average over *some* of each entity's rows and has to end up beside *all* of them. `transform("mean")` averages over every row in the group, so on its own it gives you the wrong average. Compute the baseline as its own small table, then bring it back with a merge — and validate that merge.
 
 Display the five entities with the largest anomaly in 2023. One of the five is not a country. Say in a markdown cell how you can tell, and what you would need in order to remove it.
 
+### Finally: your bands against the World Bank's
+
+`../data/country_info.csv` has the World Bank's own classification of every country, in `incomeLevel`. Merge it on, drop the aggregates, and restrict to 2023.
+
+1. Count how many countries fall in each combination of the World Bank's level and your band. How often do the two agree?
+2. Find the thresholds the World Bank actually uses (search for "World Bank country income classification"), rebuild your bands with them, and count again. Write a short markdown cell on why your first bands disagreed so badly, and why even the corrected ones cannot agree perfectly.
+
+> 💡 **Tip:** To compare the two classifications row by row they need the same labels. Giving your `np.select` call the World Bank's own labels — `"Low income"`, `"Lower middle income"`, and so on — is the shortest way.
+
 ---
 
-## 📚 Exercise 3: Fifty-five years of the NASDAQ
+## 📚 Exercise 3: The NASDAQ in real terms
 
-Load `../data/NASDAQ.csv` — the daily closing level of the NASDAQ Composite index — and convert `Date`
-properly, saying the format explicitly.
+Every NASDAQ figure in the lecture was **nominal**: in dollars of the day. But a dollar in 1975 bought far more than a dollar in 2015, so a nominal index mixes two things together — what shares did, and what money did. This exercise separates them.
 
-1. Report the first and last date in the file, and how many trading days fall in each **decade**.
-2. Resample to **annual** closing levels and compute the yearly percentage change. Report the five
-   best and five worst years, and say what happened in the worst two.
-3. Resample to **monthly** closing levels and find the three worst months in the whole series. The
-   worst one is more than fifty years old — look up what happened that month.
-4. Upsample the daily series to **every calendar day**. How many rows does that produce, how many are
-   empty, and what are the empty ones? Then fill them forward, and write a sentence on when carrying
-   the last price forward is reasonable and when it is not.
-5. Compute the mean level for each month two ways — `groupby` on `.dt.month`, and `resample("ME")` —
-   and report how many rows each produces. Explain in a markdown cell what each one is actually
-   measuring, and why only one of them belongs on a chart with time along the bottom.
+Load `../data/NASDAQ.csv` and convert `Date` properly, saying the format explicitly.
 
-### Then: the lost decade
+1. **The worst months.** Resample to monthly closing levels and find the three worst months in the whole series. The worst one is more than fifty years old — look up what happened that month.
+2. **Bring in prices.** Resample to annual closing levels, and turn the result into a table with a `year` column. Then load `../data/FRED_annual.xlsx`, which holds annual US macroeconomic series including the consumer price index, `CPI`, and merge `CPI` on by year. Use `validate=` and `indicator=True`, and report which years did not match and why. Decide which kind of join you want, and say why.
+3. **Real returns.** Convert the annual closing level into **constant 1999 dollars** — divide by that year's CPI and multiply by 1999's CPI — and compute the yearly percentage change of both the nominal and the real level. Report the five worst years in real terms, and compare them against the nominal ranking. Which decade looks much worse once inflation is taken out?
+4. **The lost decade, again.** Report the closing level at the end of 1999 and at the end of 2009, and the percentage change between them, in nominal and in real terms. Then find the first year in which the index closed above its 1999 level again — once in nominal terms and once in real terms.
 
-Using the annual series from question 2, report the closing level at the end of 1999 and at the end of
-2009, and the percentage change between them. Then find the first year in which the index closed above
-its 1999 level again.
+Write a short markdown cell on what this means for the "shares go up over time" claim — and note that this series is the NASDAQ, which is unusually concentrated in technology companies.
 
-Write a short markdown cell on what that means for the "shares go up over time" claim — and note that
-this series is the NASDAQ, which is unusually concentrated in technology companies.
+> 💡 **Tip:** `resample` needs the dates as the index and in order — `.set_index("Date").sort_index()`. And `reset_index()` turns the dates back into an ordinary column when you need one to merge on.
 
-> 💡 **Tip:** `resample` needs the dates as the index and in order — `.set_index("Date").sort_index()`.
+---
 
-## 📚 Exercise 4: Ten files, one table
+## 📚 Exercise 4: Ten companies through 2020
 
 The folder `../data/stocks/` holds one CSV per company: daily prices and volume for 2020, ten tickers, same columns in each. The company name appears nowhere inside the files — only in the file name.
 
-**Task 1.** Read all ten into a single DataFrame, using `os.listdir` and a loop as described in "Before you start". Add a `ticker` column taken from the file name, convert `Date`, and combine with `concat`. You should end up with 2 520 rows and 10 tickers.
+**Task 1.** Read all ten into a single DataFrame, using `os.listdir` and a loop as described in "Before you start". Add a `ticker` column taken from the file name, convert `Date` with an explicit format, and combine with `concat`. You should end up with 2 520 rows and 10 tickers.
 
 **Task 2.** Check the combined table before you trust it: how many rows are exact duplicates, and how many `ticker`–`Date` combinations appear more than once? Say in a markdown cell why both checks are worth doing, and what it would mean if the second one found something the first did not.
 
@@ -226,15 +228,19 @@ The folder `../data/stocks/` holds one CSV per company: daily prices and volume 
 
 Then write a paragraph comparing them. Which would you actually write, and what did the loop cost you in lines and in the number of places a mistake could hide?
 
-**Task 4.** Using whichever result you prefer, display the five ticker–month combinations with the highest traded volume of 2020.
+**Task 4.** The ten share prices are on completely different scales, so compare them the way the financial press does: **rebase** each ticker to 100 on its first trading day, so that 150 means "up 50% since 2 January". Use `Adj Close`, the price adjusted for stock splits and dividends. Report each ticker's lowest rebased level of the year and its level on the last day, sorted by the last.
 
-> 💡 **Tip:** For the loop version, `df["Date"].dt.month` gives you the month of every row, so the inner loop can be `for month in range(1, 13)`.
+**Task 5.** The pandemic crash ran from the market peak on **19 February 2020** to the bottom on **23 March 2020**. Filter to those dates and report how far each ticker fell between the first and the last day of the window, from worst to best. Write a sentence on whether the ranking is what you would have guessed.
+
+**Task 6.** A day's traded volume means little on its own — Apple trades more shares on a quiet day than Walmart does on a busy one. Add a column giving each row's volume **relative to its own ticker's median volume**, and display the five days with the most unusual trading. Look up what happened on the top one.
+
+> 💡 **Tip:** For the loop version, `df["Date"].dt.month` gives you the month of every row, so the inner loop can be `for month in range(1, 13)`. For the `resample` version, the lecture resampled a single series; here there are ten in one table. `resample` can follow a `groupby`, exactly like the other methods that must not run across a boundary: `stocks.set_index("Date").groupby("ticker").resample("ME")`.
 
 ---
 
 ## 📚 Exercise 5: A merge that goes wrong
 
-The point of this exercise is the diagnosis, not the fix. Do it in order, and do not skip ahead to the answer you already know from the lecture.
+**This exercise deliberately repeats the lecture.** The diagnosis of a failed merge is the most useful habit this week teaches, and the way to make it a habit is to do it yourself, from an empty notebook, without the lecture open. If you find yourself copying cells across, close the lecture and start again.
 
 Load `../data/co2_emissions.csv` and `../data/country_info.csv`.
 
@@ -243,45 +249,37 @@ Load `../data/co2_emissions.csv` and `../data/country_info.csv`.
 3. Identify the entities that failed to match, and then work out *why* they failed even though they are plainly present in both files. Print the evidence, do not just assert it.
 4. Fix it **two ways**, and confirm both give the same row count: once by cleaning the key, and once by choosing a better key. Say in a markdown cell which you would use here and which you would use on a file that had no code column.
 5. With the merge fixed, add `validate=` set to the shape you believe the merge has. Then deliberately claim the wrong shape and show the error.
-6. Now answer the question the previous week could not: drop the aggregates and display the ten countries with the highest total emissions in 2023. Report how many entities the table had before and after dropping them.
+
+### Then: the other side of the merge
+
+Everything above asked which *emissions* rows found no match. Now ask the opposite: which entities in the *lookup file* match nothing in the emissions file? Use the `how=` that keeps unmatched rows from both sides, with `indicator=True`, and report how many lookup entries are unused and what kind of entity they are. Say in a markdown cell whether they matter for this analysis, and when unused lookup entries *would* matter.
 
 ---
 
 ## 📚 Exercise 6: A loader you will call more than once
 
-Last week you wrote `load_emissions`, and this week's lecture opened by calling it in one line. This
-exercise writes its successor — the version that also brings in the country file.
+Last time you wrote `load_emissions`, and this week's lecture opened by calling it in one line. This exercise writes its successor — the version that also brings in the country file.
 
-Wrapping loading and cleaning in a function is worth doing for one reason above all: **you run it more
-than once.** Here that is literal, because the two questions below need the table two different ways.
+Wrapping loading and cleaning in a function is worth doing for one reason above all: **you run it more than once.** Here that is literal, because the questions below need the table two different ways.
 
 Write `load_panel(emissions_path, info_path, countries_only=True)` that:
 
 1. Reads the emissions file and drops rows with no `co2_total`.
 2. Adds `co2_pc`, emissions in tonnes per person.
-3. Reads the country file and merges it on, bringing across `region` and `incomeLevel`, using the key
-   that works and `validate=` set to the right shape.
-4. Checks that the merge did not change the row count, and **raises a `ValueError` with a useful
-   message** if it did.
-5. If `countries_only` is `True`, drops the entities whose region is `"Aggregates"`. If it is `False`,
-   keeps them.
+3. Reads the country file, renames `incomeLevel` to `income_level`, and merges it on, bringing across `region` and `income_level`, using the key that works and `validate=` set to the right shape.
+4. Checks that the merge did not change the row count, and **raises a `ValueError` with a useful message** if it did.
+5. If `countries_only` is `True`, drops the entities whose region is `"Aggregates"`. If it is `False`, keeps them.
 6. Returns the result with a clean index. It should not print anything.
 
-Give it a docstring in the longer format, saying what each parameter does, what comes back, and what
-it raises.
+Give it a docstring in the longer format, saying what each parameter does, what comes back, and what it raises.
 
 Then, below the function:
 
-- Call it both ways and confirm you get 4 872 rows with the default and 5 904 with
-  `countries_only=False`.
-- **Use both results together**: total the 2023 emissions of the 203 countries, and compare that
-  against the `World` row, which only exists in the second table. Report the difference and explain it.
-- Produce a table of total emissions by region and year, as ordinary columns rather than as an index.
-- For 2023, report each region's emissions **per person** — the region's total emissions divided by the
-  region's total population, not the average of its countries' figures. Write the calculation as a
-  function and apply it to the groups.
-- Compare that against the plain average of `co2_pc` within each region, and write a short markdown
-  cell on which regions the two disagree about and why.
+- Call it both ways and confirm you get 4 872 rows with the default and 5 904 with `countries_only=False`.
+- **Who emits?** For every year, compute each income level's share of that year's total emissions across the 203 countries, as ordinary columns rather than as an index. Display the shares for 2000, 2010 and 2023, and describe in a sentence what changed.
+- **Check yourself against the World Bank.** The aggregates include a `Middle income` entity. Using both of your tables, compare its 2023 emissions against your own total for the lower-middle and upper-middle countries. Report the difference.
+- **Per person, two ways.** For 2023, compute each income level's emissions per person — total emissions divided by total population, not the average of its countries' figures. Do it twice: once by writing a function that takes one group's rows and returns the figure, and calling it with `.apply()` on the groupby; and once without a function, by summing the two columns within each group and dividing. Confirm the two agree, and say in a markdown cell which you would write and why.
+- Compare that against the plain average of `co2_pc` within each income level, and write a short markdown cell on which level the two disagree about most, and why.
 
 > 💡 **Tip:** Keep the function in its own cell, with the calls that demonstrate it in the cells
 below. A function tangled up with the code that uses it is a function you end up rewriting.
@@ -289,3 +287,8 @@ below. A function tangled up with the code that uses it is a function you end up
 > 💡 **Tip:** A check that raises is worth more than a comment saying what should be true.
 `if len(after) != len(before): raise ValueError(...)` turns a silent wrong answer into a stack trace,
 which is the trade this whole week has been arguing for.
+
+> 💡 **Tip:** `.apply()` on a groupby calls your function once per group and hands it that group's
+rows as a DataFrame, so the function can use as many columns as it needs. Select the columns first —
+`.groupby("income_level")[["co2_total", "population"]].apply(...)` — so the function sees only what
+it uses.
