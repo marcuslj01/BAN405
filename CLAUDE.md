@@ -11,13 +11,15 @@ On the exam, the only material available is the lecture notebooks, exported as P
 - `04-functions.pdf`
 - `07-pandas-basics.pdf`
 - `08-summarizing-and-combining.pdf`
+- `09-visualization.pdf`
+- `10-linear-regression.pdf`
 
-(Source notebooks are in `week01` ... `week08`; home exercises are not included in the PDFs.)
+(Source notebooks are in `week01` ... `week10`; home exercises are not included in the PDFs.)
 
 **New weeks:** when a new week's lecture notebook appears (e.g. `week09/09-....ipynb`), convert it to PDF and add it to `pdf/`, and add it to the list above. Only the numbered lecture notebooks, not home exercises. `nbconvert --to pdf` fails because pandoc is not installed, so convert via HTML and print with headless Chrome instead:
 
 ```
-jupyter nbconvert --to html <notebook> --output-dir <tmpdir>
+jupyter nbconvert --to html --execute --allow-errors <notebook> --output-dir <tmpdir>
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=pdf/<name>.pdf file://<tmpdir>/<name>.html
 ```
 
